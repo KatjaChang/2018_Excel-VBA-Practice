@@ -1,0 +1,152 @@
+Sub SummaryForAllDate()
+
+Dim StrPath As String
+Dim RawDataStrCriteria As String
+Dim StrCriterial As String
+Dim SortData As Long
+
+'Align all data description in items
+Sheets("RawData").Select
+Columns("C:C").EntireColumn.Select
+Selection.Replace What:=" *", Replacement:="", LookAt:=xlPart, _
+    SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+    ReplaceFormat:=False
+
+'Filter for all raw data
+Range("A1").Select
+Selection.AutoFilter
+
+'Pick up filtering
+Sheets("NGList").Select
+Range("A1").Select
+
+While ActiveCell.Value <> ""
+RawDataStrCriteria = ActiveCell.Value
+
+Sheets("RawData").Select
+ActiveSheet.Range("$A$1:$E$" & Application.WorksheetFunction.CountA(Range("A:A"))).AutoFilter Field:=2, Criteria1:=RawDataStrCriteria
+
+SortData = Range(Cells(1, 1), Cells(1, 1).End(xlDown)).Rows.Count
+    
+    'Fused ID with no data avaiable mark with red.
+    If SortData = 1048576 Then '1048576 is the last row in all excel file.
+        Sheets("NGList").Select
+        ActiveCell.Interior.Color = 255
+    Else
+        'copy filter data
+        Sheets("RawData").Select
+        Range("A1").Select
+        Range(Selection, Selection.End(xlToRight)).Select
+        Range(Selection, Selection.End(xlDown)).Select
+        Selection.Copy
+        'paste filter data
+        Sheets.Add After:=Worksheets(Worksheets.Count)
+        ActiveSheet.Name = RawDataStrCriteria
+        Range("A1").Select
+        Selection.PasteSpecial Paste:=xlPasteValues, operation:=xlNone, skipblanks:=False, Transpose:=False
+
+        'Add sheets for data summary and chart
+        Sheets.Add After:=ActiveSheet
+        ActiveSheet.Name = RawDataStrCriteria & "_Summary"
+
+        'mark tilte for each position SFR data
+        ActiveCell.Offset(0, 1).Range("A1").Select
+        Application.CutCopyMode = False
+        ActiveCell.FormulaR1C1 = "CT_V"
+        ActiveCell.Offset(0, 1).Range("A1").Select
+        ActiveCell.FormulaR1C1 = "CT_H"
+        ActiveCell.Offset(0, 1).Range("A1").Select
+        ActiveCell.FormulaR1C1 = "RT_V"
+        ActiveCell.Offset(0, 1).Range("A1").Select
+        ActiveCell.FormulaR1C1 = "RT_H"
+        ActiveCell.Offset(0, 1).Range("A1").Select
+        ActiveCell.FormulaR1C1 = "RB_V"
+        ActiveCell.Offset(0, 1).Range("A1").Select
+        ActiveCell.FormulaR1C1 = "RB_H"
+        ActiveCell.Offset(0, 1).Range("A1").Select
+        ActiveCell.FormulaR1C1 = "LT_V"
+        ActiveCell.Offset(0, 1).Range("A1").Select
+        ActiveCell.FormulaR1C1 = "LT_H"
+        ActiveCell.Offset(0, 1).Range("A1").Select
+        ActiveCell.FormulaR1C1 = "LB_V"
+        ActiveCell.Offset(0, 1).Range("A1").Select
+        ActiveCell.FormulaR1C1 = "LB_H"
+        ActiveCell.Offset(1, 0).Range("A1").Select
+
+        'filter for different position SFR
+        Sheets(RawDataStrCriteria).Select
+        Range("A1").Select
+        Selection.AutoFilter
+
+        'summary SFR data
+        Sheets(RawDataStrCriteria & "_Summary").Select
+        Range("B1").Select
+
+        While ActiveCell.Value <> ""
+            'set criteria for filter
+            StrCriterial = ActiveCell.Value
+
+            'filter for SFR at different position
+            Sheets(RawDataStrCriteria).Select
+            ActiveSheet.Range("$A$1:$E$" & Application.WorksheetFunction.CountA(Range("A:A"))).AutoFilter Field:=3, Criteria1:=StrCriterial
+            'copy filter data
+            Range("D1").Select
+            Range(Selection, Selection.End(xlDown)).Select
+            Selection.Copy
+
+            'paste filter data
+            Sheets(RawDataStrCriteria & "_Summary").Select
+            'Range("B1").Select
+            ActiveCell.Offset(1, 0).Range("A1").Select
+            Selection.PasteSpecial Paste:=xlPasteValues, operation:=xlNone, skipblanks:=False, Transpose:=False
+
+            'move to next data
+            ActiveCell.Offset(-1, 1).Range("A1").Select
+
+        Wend
+
+        'release filter data
+        Sheets(RawDataStrCriteria).Select
+        ActiveSheet.Range("$A$1:$E$" & Application.WorksheetFunction.CountA(Range("A:A"))).AutoFilter Field:=3
+
+       'Delet tile that copy from raw data
+        Sheets(RawDataStrCriteria & "_Summary").Select
+        Rows("2:2").Select
+        Selection.Delete Shift:=xlUp
+
+        'put count for each column
+        Range("A2").Select
+        ActiveCell.FormulaR1C1 = "1"
+        Range("A3").Select
+        ActiveCell.FormulaR1C1 = "2"
+        Range("A4").Select
+        ActiveCell.FormulaR1C1 = "3"
+        Range("A2:A4").Select
+        Selection.AutoFill Destination:=Range("A2:A" & Application.WorksheetFunction.CountA(Range("B:B")))
+        Range("A2:A" & Application.WorksheetFunction.CountA(Range("B:B"))).Select
+
+        'make chart
+        Columns("A:K").Select
+        ActiveSheet.Shapes.AddChart2(240, xlXYScatterSmooth).Select
+        ActiveChart.SetSourceData Source:=Range(RawDataStrCriteria & "_Summary" & "!$A:$K")
+
+        'change chart title
+        ActiveChart.ChartTitle.Text = RawDataStrCriteria
+
+    End If
+
+    Sheets("NGList").Select
+    ActiveCell.Offset(1, 0).Range("A1").Select
+Wend
+
+'release filter data
+Sheets("RawData").Select
+ActiveSheet.Range("$A$1:$E$" & Application.WorksheetFunction.CountA(Range("A:A"))).AutoFilter Field:=2
+
+'Save as Marco enable formate
+StrPath = ActiveWorkbook.Path
+ActiveWorkbook.SaveAs Filename:= _
+StrPath & "\NoraSummary" & "_" & Format(Date, "yyyymmdd") & "_" & Format(Time, "hhmmss") & ".xlsm", FileFormat:= _
+xlOpenXMLWorkbookMacroEnabled, CreateBackup:=False
+
+End Sub
